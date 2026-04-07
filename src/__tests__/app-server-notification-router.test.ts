@@ -580,8 +580,10 @@ describe('AppServerNotificationRouter', () => {
         'error',
         'item/agentMessage/delta',
         'item/commandExecution/outputDelta',
+        'item/commandExecution/terminalInteraction',
         'item/completed',
         'item/fileChange/outputDelta',
+        'item/plan/delta',
         'item/reasoning/summaryTextDelta',
         'item/reasoning/textDelta',
         'item/started',
@@ -589,6 +591,7 @@ describe('AppServerNotificationRouter', () => {
         'reasoningTextDelta',
         'thread/tokenUsage/updated',
         'turn/completed',
+        'turn/plan/updated',
       ].sort(),
     );
     expect(Object.keys(internals.serverRequestHandlers).sort()).toEqual(

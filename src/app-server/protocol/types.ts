@@ -268,6 +268,26 @@ export type ContextCompactionItem = {
   id: string;
 };
 
+export type DynamicToolCallItem = {
+  type: 'dynamicToolCall';
+  id: string;
+  tool: string;
+  arguments: unknown;
+  status: string;
+  contentItems: unknown[] | null;
+  success: boolean | null;
+  durationMs: number | null;
+};
+
+export type ImageGenerationItem = {
+  type: 'imageGeneration';
+  id: string;
+  status: string;
+  revisedPrompt: string | null;
+  result: string;
+  savedPath?: string;
+};
+
 export type ThreadItem =
   | UserMessageItem
   | AgentMessageItem
@@ -281,7 +301,9 @@ export type ThreadItem =
   | ImageViewItem
   | EnteredReviewModeItem
   | ExitedReviewModeItem
-  | ContextCompactionItem;
+  | ContextCompactionItem
+  | DynamicToolCallItem
+  | ImageGenerationItem;
 
 export interface Turn {
   id: string;
@@ -456,6 +478,35 @@ export interface DynamicToolCallResponse {
   contentItems: unknown[];
   success: boolean;
 }
+
+export type TerminalInteractionNotification = {
+  threadId: string;
+  turnId: string;
+  itemId: string;
+  processId: string;
+  stdin: string;
+};
+
+export type PlanDeltaNotification = {
+  threadId: string;
+  turnId: string;
+  itemId: string;
+  delta: string;
+};
+
+export type TurnPlanStepStatus = 'pending' | 'inProgress' | 'completed';
+
+export type TurnPlanStep = {
+  step: string;
+  status: TurnPlanStepStatus;
+};
+
+export type TurnPlanUpdatedNotification = {
+  threadId: string;
+  turnId: string;
+  explanation: string | null;
+  plan: TurnPlanStep[];
+};
 
 export interface ChatgptAuthTokensRefreshParams {
   reason: string;

@@ -101,6 +101,9 @@ export class AppServerNotificationRouter {
       if (this.bufferTurnScopedEventBeforeBinding({ kind: 'notification', method, params })) {
         return;
       }
+      if (process.env.CODEX_DEBUG_NOTIFICATIONS) {
+        process.stderr.write(`[notification] ${method} ${JSON.stringify(params).slice(0, 300)}\n`);
+      }
       this.emitter.emitRaw(method, params);
       this.handleNotification(method, params);
     };

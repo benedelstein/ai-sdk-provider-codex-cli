@@ -39,6 +39,27 @@ function mapTool(item: ThreadItem): { toolName: string; dynamic?: boolean } | un
     return { toolName: 'web_search' };
   }
 
+  if (type === 'plan') {
+    return { toolName: 'update_plan' };
+  }
+
+  if (type === 'imageview') {
+    return { toolName: 'view_image' };
+  }
+
+  if (type === 'dynamictoolcall') {
+    const tool =
+      typeof (item as { tool?: unknown }).tool === 'string'
+        ? (item as { tool: string }).tool || 'tool'
+        : 'tool';
+    return { toolName: `dynamic__${tool}` };
+  }
+
+  if (type === 'imagegeneration') {
+    return { toolName: 'image_generation' };
+  }
+
+  // TODO: FALLBACK?
   return undefined;
 }
 
@@ -167,6 +188,22 @@ export function createNotificationHandlers(
     'item/completed': handleItemCompleted,
     'item/commandExecution/outputDelta': handleOutputDelta('exec'),
     'item/fileChange/outputDelta': handleOutputDelta('patch'),
+    'item/commandExecution/terminalInteraction': (params) => {
+      if (!context.isSameTurn(params) || typeof params.stdin !== 'string') return;
+      const itemId = typeof params.itemId === 'string' ? params.itemId : generateId();
+      context.emitter.emitToolOutputDelta(itemId, 'exec', `[stdin]: ${params.stdin}`);
+    },
+    'item/plan/delta': (params) => {
+      if (!context.isSameTurn(params) || typeof params.delta !== 'string') return;
+      const itemId = typeof params.itemId === 'string' ? params.itemId : generateId();
+      context.emitter.emitToolOutputDelta(itemId, 'update_plan', params.delta);
+    },
+    'turn/plan/updated': (params) => {
+      if (!context.isSameTurn(params) || !Array.isArray(params.plan)) return;
+      const toolCallId = generateId();
+      context.emitter.emitToolCall(toolCallId, 'update_plan', safeStringify(params));
+      context.emitter.emitToolResult(toolCallId, 'update_plan', {} as import('@ai-sdk/provider').JSONObject);
+    },
     'thread/tokenUsage/updated': (params) => {
       if (!context.isSameTurn(params)) return;
       const event = params as unknown as ThreadTokenUsageUpdatedNotification;

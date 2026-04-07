@@ -215,6 +215,30 @@ const contextCompactionItemSchema = z
   })
   .passthrough();
 
+const dynamicToolCallItemSchema = z
+  .object({
+    type: z.literal('dynamicToolCall'),
+    id: z.string(),
+    tool: z.string(),
+    arguments: z.unknown(),
+    status: z.string(),
+    contentItems: z.array(z.unknown()).nullable().optional(),
+    success: z.boolean().nullable().optional(),
+    durationMs: z.number().nullable().optional(),
+  })
+  .passthrough();
+
+const imageGenerationItemSchema = z
+  .object({
+    type: z.literal('imageGeneration'),
+    id: z.string(),
+    status: z.string(),
+    revisedPrompt: z.string().nullable().optional(),
+    result: z.string(),
+    savedPath: z.string().optional(),
+  })
+  .passthrough();
+
 export const threadItemSchema = z.discriminatedUnion('type', [
   userMessageItemSchema,
   agentMessageItemSchema,
@@ -229,6 +253,8 @@ export const threadItemSchema = z.discriminatedUnion('type', [
   enteredReviewModeItemSchema,
   exitedReviewModeItemSchema,
   contextCompactionItemSchema,
+  dynamicToolCallItemSchema,
+  imageGenerationItemSchema,
 ]);
 
 const codexHttpStatusCodeSchema = z
@@ -348,6 +374,41 @@ export const fileChangeOutputDeltaNotificationSchema = z
     turnId: z.string(),
     itemId: z.string(),
     delta: z.string(),
+  })
+  .passthrough();
+
+export const terminalInteractionNotificationSchema = z
+  .object({
+    threadId: z.string(),
+    turnId: z.string(),
+    itemId: z.string(),
+    processId: z.string(),
+    stdin: z.string(),
+  })
+  .passthrough();
+
+export const planDeltaNotificationSchema = z
+  .object({
+    threadId: z.string(),
+    turnId: z.string(),
+    itemId: z.string(),
+    delta: z.string(),
+  })
+  .passthrough();
+
+export const turnPlanUpdatedNotificationSchema = z
+  .object({
+    threadId: z.string(),
+    turnId: z.string(),
+    explanation: z.string().nullable().optional(),
+    plan: z.array(
+      z
+        .object({
+          step: z.string(),
+          status: z.enum(['pending', 'inProgress', 'completed']),
+        })
+        .passthrough(),
+    ),
   })
   .passthrough();
 
@@ -522,6 +583,9 @@ export const incomingNotificationSchemas: Record<string, z.ZodTypeAny> = {
   'item/reasoning/summaryTextDelta': reasoningSummaryTextDeltaNotificationSchema,
   'item/commandExecution/outputDelta': commandExecutionOutputDeltaNotificationSchema,
   'item/fileChange/outputDelta': fileChangeOutputDeltaNotificationSchema,
+  'item/commandExecution/terminalInteraction': terminalInteractionNotificationSchema,
+  'item/plan/delta': planDeltaNotificationSchema,
+  'turn/plan/updated': turnPlanUpdatedNotificationSchema,
   'thread/tokenUsage/updated': threadTokenUsageUpdatedNotificationSchema,
   error: errorNotificationSchema,
 };
