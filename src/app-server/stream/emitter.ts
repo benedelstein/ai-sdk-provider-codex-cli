@@ -122,13 +122,13 @@ export class AppServerStreamEmitter {
     });
   }
 
-  emitToolCall(toolCallId: string, toolName: string, input: string, dynamic?: boolean): void {
+  emitToolCall(toolCallId: string, toolName: string, input: string): void {
     this.safeEnqueue({
       type: 'tool-input-start',
       id: toolCallId,
       toolName,
       providerExecuted: true,
-      ...(dynamic ? { dynamic: true } : {}),
+      dynamic: true,
     });
     if (input) {
       this.safeEnqueue({ type: 'tool-input-delta', id: toolCallId, delta: input });
@@ -141,7 +141,7 @@ export class AppServerStreamEmitter {
       toolName,
       input,
       providerExecuted: true,
-      ...(dynamic ? { dynamic: true } : {}),
+      dynamic: true,
     });
   }
 

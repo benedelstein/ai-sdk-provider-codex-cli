@@ -183,7 +183,7 @@ export function createNotificationHandlers(
       if (!tool) return;
       const toolCallId = typeof item.id === 'string' ? item.id : generateId();
       context.toolTracker.start(toolCallId, tool);
-      context.emitter.emitToolCall(toolCallId, tool.toolName, safeStringify(item), tool.dynamic);
+      context.emitter.emitToolCall(toolCallId, tool.toolName, safeStringify(item));
     },
     'item/completed': handleItemCompleted,
     'item/commandExecution/outputDelta': handleOutputDelta('exec'),
