@@ -4,6 +4,7 @@ import {
   isPlainObject,
   mapCodexCliFinishReason,
   mapUnsupportedSettingsWarnings,
+  mcpHttpHeadersWithBearerToken,
   mcpServersToConfigOverrides,
   mergeSingleMcpServer,
   mergeStringRecord,
@@ -108,6 +109,62 @@ describe('shared-utils', () => {
     });
   });
 
+  it('lets incoming HTTP MCP bearerToken replace inherited Authorization header', () => {
+    const merged = mergeSingleMcpServer(
+      {
+        transport: 'http',
+        url: 'https://old',
+        httpHeaders: {
+          authorization: 'Bearer old-token',
+          A: '1',
+        },
+      },
+      {
+        transport: 'http',
+        url: 'https://new',
+        bearerToken: 'new-token',
+        httpHeaders: { B: '2' },
+      },
+    );
+
+    expect(merged.transport).toBe('http');
+    if (merged.transport !== 'http') throw new Error('Expected HTTP MCP server');
+
+    expect(merged.httpHeaders).toEqual({ A: '1', B: '2' });
+    expect(mcpHttpHeadersWithBearerToken(merged)).toEqual({
+      A: '1',
+      B: '2',
+      Authorization: 'Bearer new-token',
+    });
+  });
+
+  it('removes inherited HTTP MCP Authorization header when bearerTokenEnvVar replaces auth', () => {
+    const merged = mergeSingleMcpServer(
+      {
+        transport: 'http',
+        url: 'https://old',
+        bearerToken: 'old-token',
+        httpHeaders: {
+          AUTHORIZATION: 'Bearer stale-token',
+          A: '1',
+        },
+      },
+      {
+        transport: 'http',
+        url: 'https://new',
+        bearerTokenEnvVar: 'NEW_TOKEN_ENV',
+        httpHeaders: { B: '2' },
+      },
+    );
+
+    expect(merged.transport).toBe('http');
+    if (merged.transport !== 'http') throw new Error('Expected HTTP MCP server');
+
+    expect(merged.bearerToken).toBeUndefined();
+    expect(merged.bearerTokenEnvVar).toBe('NEW_TOKEN_ENV');
+    expect(mcpHttpHeadersWithBearerToken(merged)).toEqual({ A: '1', B: '2' });
+  });
+
   it('mergeStringRecord handles empty override as clear', () => {
     expect(mergeStringRecord({ A: '1' }, {})).toEqual({});
     expect(mergeStringRecord({ A: '1' }, { B: '2' })).toEqual({ A: '1', B: '2' });
@@ -160,6 +217,12 @@ describe('shared-utils', () => {
           url: 'https://mcp.example.com',
           bearerTokenEnvVar: 'TOKEN_ENV',
         },
+        direct: {
+          transport: 'http',
+          url: 'https://direct.example.com',
+          bearerToken: 'DIRECT_TOKEN',
+          httpHeaders: { 'x-debug': '1' },
+        },
       },
       true,
     );
@@ -169,6 +232,12 @@ describe('shared-utils', () => {
     expect(overrides['mcp_servers.local.args']).toEqual(['server.js']);
     expect(overrides['mcp_servers.remote.url']).toBe('https://mcp.example.com');
     expect(overrides['mcp_servers.remote.bearer_token_env_var']).toBe('TOKEN_ENV');
+    expect(overrides['mcp_servers.direct.url']).toBe('https://direct.example.com');
+    expect(overrides['mcp_servers.direct.bearer_token']).toBeUndefined();
+    expect(overrides['mcp_servers.direct.http_headers']).toEqual({
+      'x-debug': '1',
+      Authorization: 'Bearer DIRECT_TOKEN',
+    });
   });
 
   it('rejects invalid MCP server names consistently during merge and override mapping', () => {

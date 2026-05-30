@@ -52,7 +52,11 @@ const ask = () =>
             const inputStr = pendingInput ?? part.input ?? '{}';
             pendingInput = undefined;
             let parsedInput;
-            try { parsedInput = JSON.parse(inputStr); } catch { /* ignore */ }
+            try {
+              parsedInput = JSON.parse(inputStr);
+            } catch {
+              /* ignore */
+            }
             if (parsedInput?.command) label += `: ${parsedInput.command}`;
             else if (parsedInput?.tool) label += `: ${parsedInput.tool}`;
             else if (parsedInput?.query) label += `: ${parsedInput.query}`;
@@ -69,7 +73,9 @@ const ask = () =>
           case 'tool-result': {
             const r = part.result;
             if (process.env.CODEX_DEBUG_NOTIFICATIONS) {
-              process.stderr.write(`[tool-result] toolName=${part.toolName} result=${String(JSON.stringify(r)).slice(0, 200)} meta=${String(JSON.stringify(part.providerMetadata)).slice(0, 200)}\n`);
+              process.stderr.write(
+                `[tool-result] toolName=${part.toolName} result=${String(JSON.stringify(r)).slice(0, 200)} meta=${String(JSON.stringify(part.providerMetadata)).slice(0, 200)}\n`,
+              );
             }
             if (r?.type === 'output-delta') {
               process.stdout.write(r.delta ?? '');

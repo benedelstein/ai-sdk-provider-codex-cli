@@ -122,6 +122,33 @@ export function mergeStringRecord(
   return undefined;
 }
 
+function omitAuthorizationHeader(
+  headers?: Record<string, string>,
+): Record<string, string> | undefined {
+  if (headers === undefined) return undefined;
+  return Object.fromEntries(
+    Object.entries(headers).filter(([key]) => key.toLowerCase() !== 'authorization'),
+  );
+}
+
+export function mcpHttpHeadersWithBearerToken(
+  server: McpServerHttp,
+): Record<string, string> | undefined {
+  const headers = server.httpHeaders ? { ...server.httpHeaders } : undefined;
+  if (server.bearerToken === undefined) {
+    return headers;
+  }
+
+  const hasAuthorizationHeader = Object.keys(headers ?? {}).some(
+    (key) => key.toLowerCase() === 'authorization',
+  );
+
+  return {
+    ...(headers ?? {}),
+    ...(hasAuthorizationHeader ? {} : { Authorization: `Bearer ${server.bearerToken}` }),
+  };
+}
+
 export function mergeSingleMcpServer(
   existing: McpServerConfig | undefined,
   incoming: McpServerConfig,
@@ -154,13 +181,16 @@ export function mergeSingleMcpServer(
   const bearerTokenEnvVar = hasIncomingAuth
     ? incoming.bearerTokenEnvVar
     : baseHttp.bearerTokenEnvVar;
+  const baseHttpHeaders = hasIncomingAuth
+    ? omitAuthorizationHeader(baseHttp.httpHeaders)
+    : baseHttp.httpHeaders;
 
   const result: McpServerConfig = {
     transport: 'http',
     url: incoming.url,
     bearerToken,
     bearerTokenEnvVar,
-    httpHeaders: mergeStringRecord(baseHttp.httpHeaders, incoming.httpHeaders),
+    httpHeaders: mergeStringRecord(baseHttpHeaders, incoming.httpHeaders),
     envHttpHeaders: mergeStringRecord(baseHttp.envHttpHeaders, incoming.envHttpHeaders),
     enabled: incoming.enabled ?? existing.enabled,
     startupTimeoutSec: incoming.startupTimeoutSec ?? existing.startupTimeoutSec,
@@ -277,13 +307,11 @@ export function mcpServersToConfigOverrides(
       if (server.cwd) setOverride(`${prefix}.cwd`, server.cwd);
     } else {
       setOverride(`${prefix}.url`, server.url);
-      if (server.bearerToken !== undefined)
-        setOverride(`${prefix}.bearer_token`, server.bearerToken);
       if (server.bearerTokenEnvVar !== undefined) {
         setOverride(`${prefix}.bearer_token_env_var`, server.bearerTokenEnvVar);
       }
-      if (server.httpHeaders !== undefined)
-        setOverride(`${prefix}.http_headers`, server.httpHeaders);
+      const httpHeaders = mcpHttpHeadersWithBearerToken(server);
+      if (httpHeaders !== undefined) setOverride(`${prefix}.http_headers`, httpHeaders);
       if (server.envHttpHeaders !== undefined) {
         setOverride(`${prefix}.env_http_headers`, server.envHttpHeaders);
       }

@@ -42,6 +42,7 @@ import {
   isPlainObject,
   mapCodexCliFinishReason,
   mapUnsupportedSettingsWarnings,
+  mcpHttpHeadersWithBearerToken,
   mergeMcpServers,
   safeStringify,
   sanitizeJsonSchema,
@@ -402,12 +403,11 @@ export class ExecLanguageModel implements LanguageModelV3 {
         if (server.cwd) this.addConfigOverride(args, `${prefix}.cwd`, server.cwd);
       } else {
         this.addConfigOverride(args, `${prefix}.url`, server.url);
-        if (server.bearerToken !== undefined)
-          this.addConfigOverride(args, `${prefix}.bearer_token`, server.bearerToken);
         if (server.bearerTokenEnvVar)
           this.addConfigOverride(args, `${prefix}.bearer_token_env_var`, server.bearerTokenEnvVar);
-        if (server.httpHeaders !== undefined)
-          this.addConfigOverride(args, `${prefix}.http_headers`, server.httpHeaders);
+        const httpHeaders = mcpHttpHeadersWithBearerToken(server);
+        if (httpHeaders !== undefined)
+          this.addConfigOverride(args, `${prefix}.http_headers`, httpHeaders);
         if (server.envHttpHeaders !== undefined)
           this.addConfigOverride(args, `${prefix}.env_http_headers`, server.envHttpHeaders);
       }
@@ -616,7 +616,13 @@ export class ExecLanguageModel implements LanguageModelV3 {
     inputPayload: unknown,
   ): void {
     const inputString = safeStringify(inputPayload);
-    controller.enqueue({ type: 'tool-input-start', id: toolCallId, toolName });
+    controller.enqueue({
+      type: 'tool-input-start',
+      id: toolCallId,
+      toolName,
+      providerExecuted: true,
+      dynamic: true,
+    });
     if (inputString) {
       controller.enqueue({ type: 'tool-input-delta', id: toolCallId, delta: inputString });
     }
@@ -627,6 +633,7 @@ export class ExecLanguageModel implements LanguageModelV3 {
       toolName,
       input: inputString,
       providerExecuted: true,
+      dynamic: true,
     });
   }
 
@@ -665,6 +672,7 @@ export class ExecLanguageModel implements LanguageModelV3 {
       toolCallId,
       toolName,
       result: (resultPayload ?? {}) as NonNullable<import('@ai-sdk/provider').JSONValue>,
+      dynamic: true,
       ...(isError ? { isError: true } : {}),
       ...(Object.keys(providerMetadataEntries).length
         ? { providerMetadata: { 'codex-cli': providerMetadataEntries } }
